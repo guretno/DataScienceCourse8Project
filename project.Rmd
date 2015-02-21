@@ -69,7 +69,7 @@ table(pred, testing$classe)
 confusionMatrix(testing$classe, pred)
 ```
 
-This model yielded a 99.39% prediction accuracy. Again, this model proved very good to be used to predict the test set data.
+This model yielded a 99.39% prediction accuracy. Again, this model proved very good to be used to predict the test set data. The "out-of-sample error" is the error rate on data that was NOT used to tune or train the model. Hence, we can estimate with this formula out-of-sample error = 1 - Accuracy. Hence, with this model, the out-of-sample error can be estimated = 1-0.9939 = 0.0061 = .61% which is quite close to the OOB error rate which still both very small.
 
 ### Predictions
 A separate data set was then loaded into R and cleaned in the same manner as before. The model was then used to predict the classifications of the 20 results of this new data. This is the test set data downloaded earlier and not to be confused with the testing set which is used from splitting 30% from the training data for cross validation.
