@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="description" content="Datasciencecourse8project : ">
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Datasciencecourse8project</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/guretno/DataScienceCourse8Project">View on GitHub</a>
+
+          <h1 id="project_title">Datasciencecourse8project</h1>
+          <h2 id="project_tagline"></h2>
+
+            <section id="downloads">
+              <a class="zip_download_link" href="https://github.com/guretno/DataScienceCourse8Project/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/guretno/DataScienceCourse8Project/tarball/master">Download this project as a tar.gz file</a>
+            </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <h1>
+<a id="project-report" class="anchor" href="#project-report" aria-hidden="true"><span class="octicon octicon-link"></span></a>Project Report</h1>
+
+<p>Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. </p>
+
+<p>In this project, the goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of six participants to predict how well they were doing the exercise in terms of the classification in the data. More information is available from the website here: <a href="http://groupware.les.inf.puc-rio.br/har">http://groupware.les.inf.puc-rio.br/har</a> (see the section on the Weight Lifting Exercise Dataset). </p>
+
+<h3>
+<a id="libraries" class="anchor" href="#libraries" aria-hidden="true"><span class="octicon octicon-link"></span></a>Libraries</h3>
+
+<p>The following libraries were used throughout the code.</p>
+
+<div class="highlight highlight-r"><pre>library(<span class="pl-vo">caret</span>)
+library(<span class="pl-vo">corrplot</span>)
+library(<span class="pl-vo">kernlab</span>)
+library(<span class="pl-vo">knitr</span>)
+library(<span class="pl-vo">randomForest</span>)</pre></div>
+
+<h3>
+<a id="loading-and-preprocessing-the-data" class="anchor" href="#loading-and-preprocessing-the-data" aria-hidden="true"><span class="octicon octicon-link"></span></a>Loading and preprocessing the data</h3>
+
+<p>Two csv files contatining the training and test data was downloaded from Amazon's cloudfront into a data folder in the working directory. </p>
+
+<pre lang="r,"><code># check if a data folder exists; if not then create one
+if (!file.exists("data")) {dir.create("data")}
+
+# download the training and test file
+training_fileUrl &lt;- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+download.file(training_fileUrl, "./data/pml-training.csv")
+test_fileUrl &lt;- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+download.file(test_fileUrl, "./data/pml-testing.csv")
+</code></pre>
+
+<p>The training data was then loaded into R. And then we do a cleanup to the training data. First, we remove the columns with NA values from the dataset. Then the first eight column which act as identifiers of the experiment(e.g. name, timestamp) were also removed.</p>
+
+<div class="highlight highlight-r"><pre><span class="pl-c"># read the training data set file and do a cleanup </span>
+<span class="pl-vo">training_data</span> <span class="pl-k">&lt;-</span> read.csv(<span class="pl-s1"><span class="pl-pds">"</span>./data/pml-training.csv<span class="pl-pds">"</span></span>, <span class="pl-v">na.strings</span><span class="pl-k">=</span> c(<span class="pl-s1"><span class="pl-pds">"</span>NA<span class="pl-pds">"</span></span>,<span class="pl-s1"><span class="pl-pds">"</span><span class="pl-pds">"</span></span>,<span class="pl-s1"><span class="pl-pds">"</span> <span class="pl-pds">"</span></span>))
+<span class="pl-vo">training_data_NAs</span> <span class="pl-k">&lt;-</span> apply(<span class="pl-vo">training_data</span>, <span class="pl-c1">2</span>, <span class="pl-k">function</span>(<span class="pl-vo">x</span>) {sum(is.na(<span class="pl-vo">x</span>))})
+<span class="pl-vo">training_data_clean</span> <span class="pl-k">&lt;-</span> <span class="pl-vo">training_data</span>[,which(<span class="pl-vo">training_data_NAs</span> <span class="pl-k">==</span> <span class="pl-c1">0</span>)]
+<span class="pl-vo">training_data_clean</span> <span class="pl-k">&lt;-</span> <span class="pl-vo">training_data_clean</span>[<span class="pl-c1">8</span><span class="pl-k">:</span>length(<span class="pl-vo">training_data_clean</span>)]</pre></div>
+
+<h3>
+<a id="building-the-prediction-model" class="anchor" href="#building-the-prediction-model" aria-hidden="true"><span class="octicon octicon-link"></span></a>Building the prediction model</h3>
+
+<p>The training data set was split up into training and test sets in a 70:30 ratio in order to train the model and then test it with cross validation</p>
+
+<div class="highlight highlight-r"><pre><span class="pl-c"># split t training data for training and cross validation (testing)</span>
+<span class="pl-vo">inTrain</span> <span class="pl-k">&lt;-</span> createDataPartition(<span class="pl-v">y</span> <span class="pl-k">=</span> <span class="pl-vo">training_data_clean</span><span class="pl-k">$</span><span class="pl-vo">classe</span>, <span class="pl-v">p</span> <span class="pl-k">=</span> <span class="pl-c1">0.7</span>, <span class="pl-v">list</span> <span class="pl-k">=</span> <span class="pl-c1">FALSE</span>)
+<span class="pl-vo">training</span> <span class="pl-k">&lt;-</span> <span class="pl-vo">training_data_clean</span>[<span class="pl-vo">inTrain</span>, ]
+<span class="pl-vo">testing</span> <span class="pl-k">&lt;-</span> <span class="pl-vo">training_data_clean</span>[<span class="pl-k">-</span><span class="pl-vo">inTrain</span>, ]</pre></div>
+
+<p>A random forest model was selected to predict the classification because it has methods for balancing error in class population unbalanced data sets. Then a model was fitted with the outcome set (classe) to the training class and all the other variables used to predict.</p>
+
+<div class="highlight highlight-r"><pre><span class="pl-c"># fit a model to predict the classe using everything else as a predictor</span>
+<span class="pl-vo">modFit</span> <span class="pl-k">&lt;-</span> randomForest(<span class="pl-vo">classe</span> <span class="pl-k">~</span> ., <span class="pl-v">data</span> <span class="pl-k">=</span> <span class="pl-vo">training</span>)
+<span class="pl-vo">modFit</span></pre></div>
+
+<p>The model produced a very small OOB error rate of .52% which is quite satisfactory.</p>
+
+<h3>
+<a id="cross-validation" class="anchor" href="#cross-validation" aria-hidden="true"><span class="octicon octicon-link"></span></a>Cross-validation</h3>
+
+<p>The model was then used to classify the remaining 30% of data. The results were placed in a table and also confusion matrix along with the actual classifications in order to determine the accuracy of the model.</p>
+
+<div class="highlight highlight-r"><pre><span class="pl-c"># crossvalidate the model using the remaining 30% of data</span>
+<span class="pl-vo">pred</span> <span class="pl-k">&lt;-</span> predict(<span class="pl-vo">modFit</span>, <span class="pl-vo">testing</span>)
+table(<span class="pl-vo">pred</span>, <span class="pl-vo">testing</span><span class="pl-k">$</span><span class="pl-vo">classe</span>)
+confusionMatrix(<span class="pl-vo">testing</span><span class="pl-k">$</span><span class="pl-vo">classe</span>, <span class="pl-vo">pred</span>)</pre></div>
+
+<p>This model yielded a 99.39% prediction accuracy. Again, this model proved very good to be used to predict the test set data.</p>
+
+<h3>
+<a id="predictions" class="anchor" href="#predictions" aria-hidden="true"><span class="octicon octicon-link"></span></a>Predictions</h3>
+
+<p>A separate data set was then loaded into R and cleaned in the same manner as before. The model was then used to predict the classifications of the 20 results of this new data. This is the test set data downloaded earlier and not to be confused with the testing set which is used from splitting 30% from the training data for cross validation.</p>
+
+<div class="highlight highlight-r"><pre><span class="pl-c"># apply the same treatment to the testing data.dat  </span>
+
+<span class="pl-c"># read the test data</span>
+<span class="pl-vo">test_data</span> <span class="pl-k">&lt;-</span> read.csv(<span class="pl-s1"><span class="pl-pds">"</span>./data/pml-testing.csv<span class="pl-pds">"</span></span>, <span class="pl-v">na.strings</span><span class="pl-k">=</span> c(<span class="pl-s1"><span class="pl-pds">"</span>NA<span class="pl-pds">"</span></span>,<span class="pl-s1"><span class="pl-pds">"</span><span class="pl-pds">"</span></span>,<span class="pl-s1"><span class="pl-pds">"</span> <span class="pl-pds">"</span></span>))
+<span class="pl-vo">test_data_NAs</span> <span class="pl-k">&lt;-</span> apply(<span class="pl-vo">test_data</span>, <span class="pl-c1">2</span>, <span class="pl-k">function</span>(<span class="pl-vo">x</span>) {sum(is.na(<span class="pl-vo">x</span>))})
+<span class="pl-vo">test_data_clean</span> <span class="pl-k">&lt;-</span> <span class="pl-vo">test_data</span>[,which(<span class="pl-vo">test_data_NAs</span> <span class="pl-k">==</span> <span class="pl-c1">0</span>)]
+<span class="pl-vo">test_data_clean</span> <span class="pl-k">&lt;-</span> <span class="pl-vo">test_data_clean</span>[<span class="pl-c1">8</span><span class="pl-k">:</span>length(<span class="pl-vo">test_data_clean</span>)]
+
+<span class="pl-c"># predict the classes of the test set</span>
+<span class="pl-vo">predTest</span> <span class="pl-k">&lt;-</span> predict(<span class="pl-vo">modFit</span>, <span class="pl-vo">test_data_clean</span>)
+
+<span class="pl-c"># you may use the function on the project submission to write the result into 20 separate txt for submission</span>
+<span class="pl-c"># pml_write_files(predTest)</span></pre></div>
+
+<h3>
+<a id="conclusions" class="anchor" href="#conclusions" aria-hidden="true"><span class="octicon octicon-link"></span></a>Conclusions</h3>
+
+<p>It is also usefull to predict how well a person is preforming an excercise other than only analyze how much activity they do to gain maximal performace/effect on exercise. With sufficient information and data we can predict how well is an exercise using a relatively simple model with correct algorithm. </p>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">Datasciencecourse8project maintained by <a href="https://github.com/guretno">guretno</a></p>
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>
