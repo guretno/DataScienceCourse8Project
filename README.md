@@ -1,0 +1,97 @@
+# DataScienceCourse8Project
+
+
+# Project Report
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. 
+
+In this project, the goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of six participants to predict how well they were doing the exercise in terms of the classification in the data. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
+
+### Libraries
+The following libraries were used throughout the code.
+```{r}
+library(caret)
+library(corrplot)
+library(kernlab)
+library(knitr)
+library(randomForest)
+```
+
+### Loading and preprocessing the data
+Two csv files contatining the training and test data was downloaded from Amazon's cloudfront into a data folder in the working directory. 
+
+```{r, eval = FALSE}
+# check if a data folder exists; if not then create one
+if (!file.exists("data")) {dir.create("data")}
+
+# download the training and test file
+training_fileUrl <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+download.file(training_fileUrl, "./data/pml-training.csv")
+test_fileUrl <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+download.file(test_fileUrl, "./data/pml-testing.csv")
+```
+
+The training data was then loaded into R. And then we do a cleanup to the training data. First, we remove the columns with NA values from the dataset. Then the first eight column which act as identifiers of the experiment(e.g. name, timestamp) were also removed.
+
+```{r}
+# read the training data set file and do a cleanup 
+training_data <- read.csv("./data/pml-training.csv", na.strings= c("NA",""," "))
+training_data_NAs <- apply(training_data, 2, function(x) {sum(is.na(x))})
+training_data_clean <- training_data[,which(training_data_NAs == 0)]
+training_data_clean <- training_data_clean[8:length(training_data_clean)]
+```
+
+### Building the prediction model
+The training data set was split up into training and test sets in a 70:30 ratio in order to train the model and then test it with cross validation
+
+```{r}
+# split t training data for training and cross validation (testing)
+inTrain <- createDataPartition(y = training_data_clean$classe, p = 0.7, list = FALSE)
+training <- training_data_clean[inTrain, ]
+testing <- training_data_clean[-inTrain, ]
+```
+
+A random forest model was selected to predict the classification because it has methods for balancing error in class population unbalanced data sets. Then a model was fitted with the outcome set (classe) to the training class and all the other variables used to predict.
+
+```{r}
+# fit a model to predict the classe using everything else as a predictor
+modFit <- randomForest(classe ~ ., data = training)
+modFit
+```
+
+The model produced a very small OOB error rate of .52% which is quite satisfactory.
+
+### Cross-validation
+The model was then used to classify the remaining 30% of data. The results were placed in a table and also confusion matrix along with the actual classifications in order to determine the accuracy of the model.
+
+```{r}
+# crossvalidate the model using the remaining 30% of data
+pred <- predict(modFit, testing)
+table(pred, testing$classe)
+confusionMatrix(testing$classe, pred)
+```
+
+This model yielded a 99.39% prediction accuracy. Again, this model proved very good to be used to predict the test set data.
+
+### Predictions
+A separate data set was then loaded into R and cleaned in the same manner as before. The model was then used to predict the classifications of the 20 results of this new data. This is the test set data downloaded earlier and not to be confused with the testing set which is used from splitting 30% from the training data for cross validation.
+
+```{r}
+# apply the same treatment to the testing data.dat  
+
+# read the test data
+test_data <- read.csv("./data/pml-testing.csv", na.strings= c("NA",""," "))
+test_data_NAs <- apply(test_data, 2, function(x) {sum(is.na(x))})
+test_data_clean <- test_data[,which(test_data_NAs == 0)]
+test_data_clean <- test_data_clean[8:length(test_data_clean)]
+
+# predict the classes of the test set
+predTest <- predict(modFit, test_data_clean)
+
+# you may use the function on the project submission to write the result into 20 separate txt for submission
+# pml_write_files(predTest)
+```
+
+### Conclusions
+It is also usefull to predict how well a person is preforming an excercise other than only analyze how much activity they do to gain maximal performace/effect on exercise. With sufficient information and data we can predict how well is an exercise using a relatively simple model with correct algorithm. 
+
