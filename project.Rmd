@@ -16,7 +16,7 @@ library(randomForest)
 ```
 
 ### Loading and preprocessing the data
-Two csv files contatining the training and test data was downloaded from Amazon's cloudfront on the 24/08/2014 into a data folder in the working directory. 
+Two csv files contatining the training and test data was downloaded from Amazon's cloudfront into a data folder in the working directory. 
 
 ```{r, eval = FALSE}
 # check if a data folder exists; if not then create one
@@ -92,3 +92,4 @@ predTest <- predict(modFit, test_data_clean)
 
 ### Conclusions
 It is also usefull to predict how well a person is preforming an excercise other than only analyze how much activity they do to gain maximal performace/effect on exercise. With sufficient information and data we can predict how well is an exercise using a relatively simple model with correct algorithm. 
+
