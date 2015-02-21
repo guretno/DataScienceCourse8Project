@@ -100,7 +100,7 @@ download.file(test_fileUrl, "./data/pml-testing.csv")
 table(<span class="pl-vo">pred</span>, <span class="pl-vo">testing</span><span class="pl-k">$</span><span class="pl-vo">classe</span>)
 confusionMatrix(<span class="pl-vo">testing</span><span class="pl-k">$</span><span class="pl-vo">classe</span>, <span class="pl-vo">pred</span>)</pre></div>
 
-<p>This model yielded a 99.39% prediction accuracy. Again, this model proved very good to be used to predict the test set data.</p>
+<p>This model yielded a 99.39% prediction accuracy. Again, this model proved very good to be used to predict the test set data. The "out-of-sample error" is the error rate on data that was NOT used to tune or train the model. Hence, we can estimate with this formula out-of-sample error = 1 - Accuracy. Hence, with this model, the out-of-sample error can be estimated = 1-0.9939 = 0.0061 = .61% which is quite close to the OOB error rate which still both very small.</p>
 
 <h3>
 <a id="predictions" class="anchor" href="#predictions" aria-hidden="true"><span class="octicon octicon-link"></span></a>Predictions</h3>
